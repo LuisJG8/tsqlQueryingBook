@@ -49,3 +49,32 @@ WHERE C.city = 'Madrid'
 GROUP BY C.custid
 HAVING COUNT(O.orderid) < 3
 ORDER BY numorders;
+
+SELECT C.custid, C.city
+FROM dbo.Customers as C
+
+
+SELECT C.custid, C.city, A.orderid
+FROM dbo.Customers as C
+ CROSS APPLY 
+  ( SELECT TOP(2) O.orderid, O.custid
+    FROM dbo.Orders AS O
+	WHERE O.custid = C.custid
+	ORDER BY orderid DESC) AS A;
+
+	   
+SELECT C.custid, C.city, A.orderid
+FROM dbo.Customers AS C
+ OUTER APPLY
+  ( SELECT TOP(2) O.orderid, O.custid
+    FROM dbo.Orders AS O
+	WHERE O.custid = C.custid
+	ORDER BY orderid DESC) AS A;
+
+-----------------------------------------------------------------------
+USE TSQL3;
+
+SELECT empid, [2013], [2014], [2015]
+FROM (SELECT empid, YEAR(orderdate) AS orderyear, val
+	  FROM Sales.OrderValues							) AS D
+	  PIVOT (SUM(val) FOR orderyear IN([2013],[2014],[2015]) ) AS P;
