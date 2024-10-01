@@ -78,3 +78,5 @@ SELECT empid, [2013], [2014], [2015]
 FROM (SELECT empid, YEAR(orderdate) AS orderyear, val
 	  FROM Sales.OrderValues							) AS D
 	  PIVOT (SUM(val) FOR orderyear IN([2013],[2014],[2015]) ) AS P;
+
+-----------------------------------------------------------------------
