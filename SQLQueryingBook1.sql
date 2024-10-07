@@ -129,7 +129,7 @@ FROM sys.dm_db_index_physical_stats
 
 --DBCC IND(N'tempdb', N'dbo.T1', 0)
 
-CREATE TABLE #DBCCIND
+CREATE TABLE #DBCCINDS
 (
 PageFID INT,
 PagePID INT,
@@ -148,10 +148,10 @@ PrevPageFID INT,
 PrevPagePID INT
 );
 
-INSERT INTO #DBCCIND
+INSERT INTO #DBCCINDS
  EXEC (N'DBCC IND(N''trmpdb'', N''dbo.T1'', 0)');
 
-CREATE CLUSTERED INDEX idx_cl_prevpage ON #DBCCIND(PrevPageFID, PrevPagePID);
+CREATE CLUSTERED INDEX idx_cl_prevpage ON #DBCCINDS(PrevPageFID, PrevPagePID);
 
 WITH LinkedList
 AS
@@ -166,4 +166,215 @@ AS
 UNION ALL
 
 SELECT PrevLevel.RowNum + 1,
-	Curlevel
+	Curlevel.PageFID, CurLevel.PagePID
+FROM LinkedList AS prevLevel
+  JOIN #DBCCIND AS CurlLevel
+   ON CurLevel.PrevPageFID = PrevLevel.PageFID
+   AND CurLevel.PrevPagePID = PrevLevel.PagePID
+)
+SELECT 
+ CAST(PageFID AS VARCHAR(MAX)) + ':'
+ + CAST(PagePID AS VARCHAR(MAX)) + ' ' AS [text()]
+ FROM LinkedList
+ ORDER BY RowNum
+ FOR XML PATH('')
+ OPTION (MAXRECURSION 0);
+
+ DROP TABLE #DBCCINDS;
+
+
+ SELECT SUBSTRING(CAST(clcol AS BINARY(16)), 11, 6) AS segment1, *
+ FROM dbo.T1
+
+
+ SELECT SUBSTRING(CAST(clcol AS BINARY(16)), 11, 6) AS segment1, *
+ FROM dbo.T1 WITH (NOLOCK);
+
+ SELECT SUBSTRING(CAST(clcol AS BINARY(16)), 11, 6) AS segment, *
+ FROM dbo.T1 WITH (TABLOCK)
+
+ -------------------------------------------------------------------
+ SET NOCOUNT ON;
+ USE tempdb;
+
+ TRUNCATE TABLE dbo.T1;
+
+ WHILE 1 = 1
+  INSERT INTO dbo.T1 DEFAULT VALUES;
+
+ -------------
+
+ SET NOCOUNT ON;
+ USE tempdb;
+
+ WHILE 1 = 1
+ BEGIN
+  SELECT * INTO #T1 FROM dbo.T1 WITH(NOLOCK);
+
+  IF EXISTS(
+   SELECT clcol
+   FROM #T1 
+   GROUP BY clcol
+   HAVING COUNT(*) > 1) BREAK;
+   
+   DROP TABLE #T1;
+  END
+
+  SELECT clcol, COUNT(*) AS cnt
+  FROM #T1 
+  GROUP BY clcol
+  HAVING COUNT(*) > 1;
+
+  DROP TABLE #T1;  
+
+  ------------------------------------------------
+
+  SET NOCOUNT ON;
+  USE tempdb;
+
+  IF OBJECT_ID(N'dbo.T1', N'U') IS NOT NULL DROP TABLE dbo.T1;
+
+  CREATE TABLE dbo.T1
+  (
+	clcol UNIQUEIDENTIFIER NOT NULL DEFAULT(NEWID()),
+	seqval INT NOT NULL,
+	filler CHAR(2000) NOT NULL DEFAULT('a')
+   );
+   
+  CREATE UNIQUE CLUSTERED INDEX idx_clcol ON dbo.T1(clcol);
+
+  -- Create table MySequence
+  IF OBJECT_ID(N'dbo.MySequence', N'U') IS NOT NULL DROP TABLE dbo.MySequence;
+
+  CREATE TABLE dbo.MySequence(val INT NOT NULL);
+  INSERT INTO dbo.MySequence(val) VALUES(0);
+
+  ------
+
+  SET NOCOUNT ON;
+  USE tempdb;
+
+  UPDATE dbo.MySequence SET val = 0;
+  TRUNCATE TABLE dbo.T1;
+  
+  DECLARE @nextval AS INT;
+
+  WHILE 1 = 1
+  BEGIN
+   UPDATE dbo.MySequence SET @nextval = val += 1
+   INSERT INTO dbo.T1(seqval) VALUES(@nextval);
+  END
+
+
+  --------
+
+  SET NOCOUNT ON;
+  USE tempdb;
+
+  DECLARE @max AS INT;
+  WHILE 1 = 1
+  BEGIN
+   SET @max = (SELECT MAX(seqval) FROM dbo.T1);
+   SELECT * INTO #T1 FROM dbo.T1 WITH(NOLOCK);
+   CREATE NONCLUSTERED INDEX idx_seqval ON #T1(seqval);
+
+   IF EXISTS(
+	  SELECT *
+	  FROM (SELECT seqval AS cur,
+				(SELECT MIN(seqval)
+				FROM #T1 AS N
+				WHERE N.seqval > C.seqval) AS nxt
+				FROM #T1 AS C
+				WHERE seqval <= @max) AS D
+	  WHERE nxt - cur > 1) BREAK;
+
+	DROP TABLE #T1;
+  END 
+
+  SELECT * 
+  FROM (SELECT seqval AS cur,
+			(SELECT MIN(seqval)
+			 FROM #T1 AS N
+			 WHERE N.seqval > C.seqval) AS nxt
+		FROM #T1 AS C
+		WHERE seqval <= @max) AS D
+  WHERE nxt - cur > 1;
+
+  DROP TABLE #T1;
+
+  ----------------------------------------------------
+
+  SET NOCOUNT ON;
+  USE tempdb;
+
+  IF OBJECT_ID(N'dbo.Employees', N'U') IS NOT NULL DROP TABLE dbo.Employees;
+
+  CREATE TABLE dbo.Employees
+  (
+   empid VARCHAR(10) NOT NULL,
+   salary MONEY NOT NULL,
+   filler CHAR(2500) NOT NULL DEFAULT('a')
+   );
+
+   CREATE CLUSTERED INDEX idx_cl_salary ON dbo.Employees(salary);
+   ALTER TABLE dbo.Employees
+     ADD CONSTRAINT PK_Employees PRIMARY KEY NONCLUSTERED(salary);
+
+   INSERT INTO dbo.Employees(empid, salary) VALUES
+   ('D', 1000.00),('A', 2000.00),('C', 3000.00),('B', 4000.00);
+   -----------------------------------------------------------------------
+
+   SET NOCOUNT ON;
+   USE tempdb;
+
+   WHILE 1 = 1
+    UPDATE dbo.Employees
+	  SET salary = 6000.00 - salary
+	WHERE empid = 'D';
+
+
+   SET NOCOUNT ON;
+   USE tempdb;
+
+   WHILE 1 = 1
+   BEGIN 
+    SELECT * INTO #Employees FROM dbo.Employees;
+
+	IF @@ROWCOUNT < 4 BREAK; -- use < 4 for skipping, > 4 for multi occur 
+
+	DROP TABLE #Employees;
+   END
+
+   SELECT * FROM #Employees;
+
+   DROP TABLE #Employees;
+
+
+
+   -----------------------------------------
+   DBCC SHOW_STATISTICS (N'dbo.myTable', N'PK_Orders') WITH HISTOGRAM;
+
+   ------------------------------------------
+
+   DBCC OPTIMIZER_WHATIF(CPUs, 16)
+
+   -----------------------------------------
+
+   USE PerformanceV3;
+   ALTER DATABASE PerformanceV3 SET COMPATIBILITY_LEVEL = 120;
+
+
+   -----------------------------------------
+
+   DECLARE @i AS INT = 500000;
+
+   SELECT empid, COUNT(*) AS numorders
+   FROM dbo.Orders
+   WHERE orderid > @i
+   GROUP BY empid
+   OPTION(OPTIMIZE FOR (@i = 999900));
+
+   -----------------------------------------
+
+   DBCC SHOW_STATISTICS(N'dbo.Orders', N'idx_nc_cid_eid');
+
