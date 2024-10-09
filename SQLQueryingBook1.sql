@@ -378,3 +378,145 @@ SELECT
 
    DBCC SHOW_STATISTICS(N'dbo.Orders', N'idx_nc_cid_eid');
 
+   ----------------------------------------------------------------------------------------
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE custid <= 'C0000001000';
+
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE empid <= 100;
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE custid <= 'C0000001000'
+	AND empid <= 100
+OPTION(QUERYTRACEON 9481);
+
+
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE custid <= 'C0000001000'
+	AND empid <= 100;
+
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE custid <= 'C0000001000'
+	OR empid <= 100;
+OPTION(QUERYTRACEON 9481);
+
+DROP INDEX idx_nc_cid_eid ON dbo.Orders;
+
+-------------------------------------------
+IF OBJECT_ID(N'dbo.Orders2', N'U') IS NOT NULL DROP TABLE dbo.Orders2;
+
+SELECT * INTO dbo.Orders2 
+FROM dbo.pokemon 
+WHERE orderid <= 900000;
+
+ALTER TABLE dbo.Orders2 ADD CONSTRAINT PK_Orders2 PRIMARY KEY NONCLUSTERED(orderid);
+
+DBCC SHOW_STATISTICS('dbo.Orders2', 'PK_Orders2');
+
+INSERT INTO dbo.Orders2
+ SELECT *
+ FROM dbo.Orders2
+ WHERE orderid > 900000 AND orderid <- 1000000;
+
+
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders2
+ WHERE orderid > 900000
+ ORDER BY orderdate
+ OPTION(QUERYTRACEON 9481)
+
+ -------------------------------------
+
+ EXEC sp_helpindex N'dbo.Orders';
+
+ idx_cl_od
+ idx_nc_sid_od_cid
+ idx_unc_od_oid_i_cid_eid
+ PK_Orders
+ 
+ ALTER DATABASE PerformanceV3 SET AUTO_CREATE_STATISTICS OFF;
+
+ ------------------------------------------------------------------
+
+ SELECT S.name AS stats_name,
+    QUOTENAME(OBJECT_SCHEMA_NAME(S.object_id)) + N'.' + QUOTENAME(OBJECT_NAME(S.object_id)) AS object, 
+	C.name AS column_name
+ FROM sys.stats AS S
+   INNER JOIN sys.stats_columns AS SC
+    ON S.object_id = SC.object_id
+	AND S.stats_id = SC.stats_id
+   INNER JOIN sys.columns AS C
+    ON SC.object_id = C.object_id
+	AND SC.column_id = C.column_id 
+ WHERE S.object_id = OBJECT_ID(N'dbo.Orders')
+    AND auto_created = 1;
+
+
+ DROPS STATISTICS dbo.Orders._WA_Sys_0000002_38EE7070;
+ DROPS STATISTICS dbo.Orders._WA_Sys_0000002_38EE7070;
+
+
+
+ -- Query 1
+ DECLARE @I AS INT = 999900;
+
+ SELECT  SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE orderid > @i;
+
+ -- Query 2
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE custid <= 'C0000000010';
+
+ -- Query 1
+ DECLARE @i AS INT = 999901, @j AS INT = 1000000;
+
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE orderid BETWEEN @i AND @j;
+
+ -- Query 2
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE orderid BETWEEN @i AND @j;
+ OPTION(QUERYTRACEON 9481);
+
+ -- Query 3
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE custid BETWEEN 'C0000000001' AND 'C0000000010';
+
+ -- Query 4
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE custid LIKE '%9999';
+
+
+  ------------
+  -- Query 1
+  DECLARE @i AS INT = 1000000;
+
+  SELECT orderid, custid, empid, shipperid, orderdate, filler
+  FROM dbo.Orders
+  WHERE orderid = @i;
+
+  -- Query 2
+  SELECT orderid, custid, empid, shipperid, orderdate, filler
+  FROM dbo.Orders
+  WHERE custid = 'COOOOOOOOO1'
+  
+  -- Query 3
+  SELECT orderid, custid, empid, shipperid, orderdate, filler
+  FROM dbo.Orders
+  WHERE custid = 'COOOOOOOOO1'
+  OPTION(QUERYTRACEON 9481);
