@@ -520,3 +520,289 @@ INSERT INTO dbo.Orders2
   FROM dbo.Orders
   WHERE custid = 'COOOOOOOOO1'
   OPTION(QUERYTRACEON 9481);
+
+------------------------------------------------------
+use master
+
+CREATE TABLE Employees
+(
+  deptID INT IDENTITY(1,1) PRIMARY KEY,
+  firstName NVARCHAR(50),
+  lastName NVARCHAR(50),
+  middleName NVARCHAR(50), 
+  salary INT
+ )
+
+INSERT INTO Employees
+VALUES
+(
+ 'Pepe',
+ 'Mendez',
+ 'Jorge',
+ 100000
+ )
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE custid <= 'C0000001000';
+
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE empid <= 100;
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE custid <= 'C0000001000'
+	AND empid <= 100
+OPTION(QUERYTRACEON 9481);
+
+
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE custid <= 'C0000001000'
+	AND empid <= 100;
+
+
+SELECT orderid, custid, empid, shipperid, orderdate, filler
+FROM dbo.Orders
+WHERE custid <= 'C0000001000'
+	OR empid <= 100;
+OPTION(QUERYTRACEON 9481);
+
+DROP INDEX idx_nc_cid_eid ON dbo.Orders;
+
+-------------------------------------------
+IF OBJECT_ID(N'dbo.Orders2', N'U') IS NOT NULL DROP TABLE dbo.Orders2;
+
+SELECT * INTO dbo.Orders2 
+FROM dbo.pokemon 
+WHERE orderid <= 900000;
+
+ALTER TABLE dbo.Orders2 ADD CONSTRAINT PK_Orders2 PRIMARY KEY NONCLUSTERED(orderid);
+
+DBCC SHOW_STATISTICS('dbo.Orders2', 'PK_Orders2');
+
+INSERT INTO dbo.Orders2
+ SELECT *
+ FROM dbo.Orders2
+ WHERE orderid > 900000 AND orderid <- 1000000;
+
+
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders2
+ WHERE orderid > 900000
+ ORDER BY orderdate
+ OPTION(QUERYTRACEON 9481)
+
+ -------------------------------------
+
+ EXEC sp_helpindex N'dbo.Orders';
+
+ idx_cl_od
+ idx_nc_sid_od_cid
+ idx_unc_od_oid_i_cid_eid
+ PK_Orders
+ 
+ ALTER DATABASE PerformanceV3 SET AUTO_CREATE_STATISTICS OFF;
+
+ ------------------------------------------------------------------
+
+ SELECT S.name AS stats_name,
+    QUOTENAME(OBJECT_SCHEMA_NAME(S.object_id)) + N'.' + QUOTENAME(OBJECT_NAME(S.object_id)) AS object, 
+	C.name AS column_name
+ FROM sys.stats AS S
+   INNER JOIN sys.stats_columns AS SC
+    ON S.object_id = SC.object_id
+	AND S.stats_id = SC.stats_id
+   INNER JOIN sys.columns AS C
+    ON SC.object_id = C.object_id
+	AND SC.column_id = C.column_id 
+ WHERE S.object_id = OBJECT_ID(N'dbo.Orders')
+    AND auto_created = 1;
+
+
+ DROPS STATISTICS dbo.Orders._WA_Sys_0000002_38EE7070;
+ DROPS STATISTICS dbo.Orders._WA_Sys_0000002_38EE7070;
+
+
+
+ -- Query 1
+ DECLARE @I AS INT = 999900;
+
+ SELECT  SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE orderid > @i;
+
+ -- Query 2
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE custid <= 'C0000000010';
+
+ -- Query 1
+ DECLARE @i AS INT = 999901, @j AS INT = 1000000;
+
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE orderid BETWEEN @i AND @j;
+
+ -- Query 2
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE orderid BETWEEN @i AND @j;
+ OPTION(QUERYTRACEON 9481);
+
+ -- Query 3
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE custid BETWEEN 'C0000000001' AND 'C0000000010';
+
+ -- Query 4
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE custid LIKE '%9999';
+
+
+
+ SELECT orderid, custid, empid, shipperid, orderdate, filler
+ FROM dbo.Orders
+ WHERE orderid <= 100000
+ ORDER BY orderdate DESC
+ OPTION(QUERYTRACEON 8649);
+
+  ------------
+  -- Query 1
+  DECLARE @i AS INT = 1000000;
+
+  SELECT orderid, custid, empid, shipperid, orderdate, filler
+  FROM dbo.Orders
+  WHERE orderid = @i;
+
+  -- Query 2
+  SELECT orderid, custid, empid, shipperid, orderdate, filler
+  FROM dbo.Orders
+  WHERE custid = 'COOOOOOOOO1'
+  
+  -- Query 3
+  SELECT orderid, custid, empid, shipperid, orderdate, filler
+  FROM dbo.Orders
+  WHERE custid = 'COOOOOOOOO1'
+  OPTION(QUERYTRACEON 9481);
+
+  ALTER DATABASE PerformanceV3 SET AUTO_CREATE_STATISTICS ON;
+
+  SELECT orderid, custid, empid, shipperid, orderdate, filler
+  FROM dbo.Orders
+  WHERE custid LIKE '%9999';
+
+
+----------------------------------------------------
+SET STATISTICS TIME ON
+SELECT firstName, lastName, middleName, salary, deptID
+
+FROM dbo.Employees
+
+WHERE salary <= 100000
+
+ORDER BY deptId
+
+
+SELECT firstName, lastName, middleName, salary, deptID
+
+FROM dbo.Employees
+
+WHERE salary < 1000000
+
+ORDER BY deptId DESC
+
+
+
+SELECT firstName, lastName, middleName, salary, deptID
+FROM dbo.Employees
+WHERE salary <= 100000
+ORDER BY deptID DESC
+OPTION(QUERYTRACEON 8649);
+
+
+--Descending indexes are useful with windows functions that have a partition clause and a window order clause
+SELECT deptId, salary,
+	ROW_NUMBER() OVER (PARTITION BY deptID ORDER BY salary) AS rowNumber
+FROM Employees;
+
+SELECT deptId, salary,
+	ROW_NUMBER() OVER (PARTITION BY deptID ORDER BY salary DESC) AS rowNumber
+FROM Employees;
+
+SELECT deptId, salary,
+	ROW_NUMBER() OVER (PARTITION BY deptID ORDER BY salary DESC) AS rowNumber
+FROM Employees
+ORDER BY deptID DESC;
+
+CREATE NONCLUSTERED INDEX idx_USA_orderdate
+ ON Sales.Orders(orderdate)
+ INCLUDE(orderidm custid, requireddate)
+ WHERE shipcountry = N'USA';
+
+ SELECT orderid, custid, orderdate, requireddate
+ FROM Sales.Orders
+ WHERE shipcountry = N'USA'
+   AND orderdate >= '20140101'
+
+
+
+CREATE NONCLUSTERED INDEX idx_USA_orderdate
+	ON Sales.Orders(orderdate)
+	INCLUDE(orderid, custid, requireddate, shipcountry)
+	WHERE shipcountry = N'USA'
+WITH ( DROP_EXISTING = ON );
+
+SELECT orderid, custid, orderdate, requireddate
+FROM Sales.Orders
+WHERE shipcountry = N'USA'
+  AND orderdate >= '20140101';
+
+
+IF OBJECT_ID(N'dbo.T1', N'U') IS NOT NULL DROP TABLE dbo.T1;
+CREATE TABLE dbo.T1(col1 INT NULL, col2 VARCHAR(10) NOT NULL);
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX idx_col1_notnul1 ON dbo.T1(col1) WHERE col1 IS NOT NULL;
+
+INSERT INTO dbo.T1(col1, col2) 
+VALUES (1, 'a'), (1, 'b')
+
+INSERT INTO dbo.T1(col1, col2) 
+VALUES (NULL, 'c'), (NULL, 'd');
+
+SELECT col1, col2
+FROM dbo.T1
+
+USE tsqlv3;
+DROP INDEX idx_USA_orderdate ON Sales.Orders;
+DROP TABLE dbo.T1;
+
+-------------------------------------------------
+USE PerformanceV3;
+SET STATISTICS IO, TIME ON
+
+SELECT D1.attr1 AS x, D2.attr1 AS y, D3.attr1 AS Z,
+ COUNT(*) AS cnt, SUM(F.measure1) AS total
+FROM dbo.Fact AS F
+ INNER JOIN dbo.Dim1 AS D1
+   ON F.key1 = D2.key1
+ INNER JOIN dbo.Dim2 AS D2
+   ON F.key2 = D2.key2
+ INNER JOIN dbo.Dim3 AS D3
+   ON F.key3 = D3.key3
+WHERE D1.attr1 <= 10
+  AND D2.attr1 <= 15
+  AND D3.attr1 <= 10
+GROUP BY D1.attr1, D2.attr1, D3.attr1;
+
+
+
+
+-----------------------------
+CREATE NONCLUSTERED COLUMNSTORE INDEX idx_nc_cs
+  ON dbo.Fact(key1, key2, key3, measure1, measure2, measure3, measure4);
