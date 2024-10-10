@@ -806,3 +806,74 @@ GROUP BY D1.attr1, D2.attr1, D3.attr1;
 -----------------------------
 CREATE NONCLUSTERED COLUMNSTORE INDEX idx_nc_cs
   ON dbo.Fact(key1, key2, key3, measure1, measure2, measure3, measure4);
+
+--------------------------------------------------------------------------------------------------------------
+
+SELECT D1.attr1 AS x, D2.attr1 AS y, D3.attr1 AS z,
+ COUNT(*) AS cnt, SUM(F.measure1) AS total
+FROM dbo.Fact AS F
+ INNER JOIN dbo.Dim1 AS D1
+  ON F.key1 = D1.key1
+ INNER JOIN dbo.Dim2 AS D2
+  ON F.key2 = D2.key2
+ INNER JOIN dbo.Dim3 AS D3
+  ON F.key3 = D3.key3
+WHERE D1.attr1 <= 10
+ AND D2.attr1 <= 15
+ AND D3.attr1 <= 10
+GROUP BY D1.attr1, D2.attr1, D3.attr1;
+
+-------------------------------------------
+
+CREATE TABLE dbo.FactsCS
+(
+ key1 INT NOT NULL,
+ key2 INT NOT NULL,
+ key3 INT NOT NULL,
+ measure1 INT NOT NULL,
+ measure2 INT NOT NULL,
+ measure3 INT NOT NULL,
+ measure4 NVARCHAR(50) NULL,
+ filler BINARY(100) NOT NULL DEFAULT (0x)
+);
+
+CREATE CLUSTERED COLUMNSTORE INDEX idx_cl_cs ON dbo.FactsCS;
+
+INSERT INTO dbo.FactsCS WITH (TABLOCK) 
+SELECT * FROM dbo.FactsCS;
+
+ALTER TABLE dbo.FactsCS REBUILD;
+
+SELECT D1.attr1 AS x, D2.attr1 AS y, D3.attr1 AS z,
+ COUNT (*) AS cnt, SUM(F.measure1) AS total
+FROM dbo.FactsCS AS F
+ INNER JOIN dbo.Dim1 AS D1
+  ON F.key1 = D1.key1
+ INNER JOIN dbo.Dim2 AS D2
+  ON F.key2 = D3.key2
+ INNER JOIN dbo. Dim3 AS D3
+  ON F.key3 = D3.key3
+WHERE D1.attr1 <= 10
+  AND D2.attr1 <= 15
+  AND D3.attr1 <= 10
+GROUP BY D1.attr1, D2.attr1, D3.attr1
+  
+SET STATISTICS IO OFF;
+SET STATISTICS TIME OFF;
+DROP INDEX idx_nc_cs ON dbo.Fact;
+DROP TABLE dbo.FactsCS;
+
+---------------------------
+
+--Inline Index definition
+DECLARE @T1 AS TABLE 
+( 
+ col1 INT NOT NULL,
+  INDEX idx_cl_col1 CLUSTERED, -- column index
+ col2 INT NOT NULL,
+ col3 INT NOT NULL,
+ INDEX idx_nc_col2_col3 NONCLUSTERED (col2, col3) -- table index
+ );
+
+ --------------------------
+ --Prioritizing queries for tuning with extended events
