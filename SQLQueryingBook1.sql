@@ -877,3 +877,116 @@ DECLARE @T1 AS TABLE
 
  --------------------------
  --Prioritizing queries for tuning with extended events
+
+ -- The following code query the view in the system
+ SELECT * FROM sys.dm_exec_query_stats;
+
+ SELECT TOP (5)
+  MAX(query) AS sample_query,
+  SUM(execution_count) AS cnt,
+  SUM(total_worker_time) AS cpu,
+  SUM(total_physical_reads) AS reads,
+  SUM(total_logical_reads) AS logical_reads,
+  SUM(total_elapsed_time) AS duration
+ FROM (SELECT 
+		 QS.*,
+		 SUBSTRING(ST.text, (QS.statement_start_offset/2) + 1,
+		   ((CASE statement_end_offset
+			 WHEN -1 THEN DATALENGTH(ST.text)
+			 ELSE QS.statement_end_offset END
+			     - QS.statement_start_offset)/2) + 1
+	  ) AS query
+	FROM sys.dm_exec_query_stats AS QS
+	  CROSS APPLY sys.dm_exec_sql_text(QS.sql_handle) AS ST
+	  CROSS APPLY sys.dm_exec_plan_attributes(QS.plan_handle) AS PA
+	WHERE PA.attribute = 'dbid'
+	  AND PA.value = DB_ID('PerformanceV3')) AS D
+  GROUP BY query_hash
+  ORDER BY duration DESC;
+
+  SELECT * FROM sys.dm_exec_procedure_stats;
+  SELECT * FROM sys.dm_exec_trigger_stats;
+
+  --Temporary objects
+  SET STATISTICS IO, TIME ON;
+
+  SELECT YEAR(orderdate) AS orderyear, COUNT(*) AS numorders
+  FROM dbo.Customers
+  GROUP BY YEAR(orderdate);
+
+
+  WITH C AS 
+  (
+    SELECT(YEAR(orderdate) AS orderyear, COUNT(*) AS numorders
+	FROM dbo.Orders
+	GROUP BY YEAR(orderdate)
+  )
+
+  SELECT C1.orderyear, C1.numorders,
+   A.orderyear AS otheryear, C1.numorders - A.numorders AS diff
+  FROM C AS C1 CROSS APPLY
+   (SELECT TOP (1) C2.orderyear, C2.numorders
+    FROM C AS C2
+	WHERE C2.orderyear <> C1.orderyear
+	ORDER BY ABS(C1.numorders - C2.numorders)) AS A
+  ORDER BY C1.orderyear;
+
+
+  DECLARE @T AS TABLE
+  (
+   orderyear INT,
+   numorders INT
+  );
+
+  INSERT INTO @T(orderyear, numorders)
+   SELECT YEAR(orderdate) AS orderyear, COUNT(*) AS numorders
+   FROM dbo.Orders
+   GROUP BY YEAR(orderdate)
+   
+   SELECT T1.orderyear, T1.numorders,
+    A.orderyear AS otheryear, T1.numorders - A.numorders AS diff
+   FROM @T AS T1 CROSS APPLY
+     (SELECT TOP (1) T2.orderyear, T2.numorders
+	  FROM @T AS T2
+	  WHERE T2.orderyear <> T1.orderyear
+	  ORDER BY ABS(T1.numorders - T2.numorders)) AS A
+   ORDER BY T1.orderyear;
+
+
+
+   DECLARE @T AS TABLE
+   (
+    col1 INT NOT NULL PRIMARY KEY NONCLUSTERED,
+	col2 INT NOT NULL,
+	filler CHAR(200) NOT NULL
+   );
+
+   INSERT INTO @T (col1, col2, filler)
+     SELECT n AS col1, n AS col2, 'a' AS filler
+	 FROM TSQLV3.dbo.GetNums(1, 100000) AS Nums;
+
+   SELECT col1, col2, filler
+   FROM @T
+   WHERE col1 <= 100
+   ORDER BY col2;
+
+   SELECT col1, col2, filler
+   FROM @T
+   WHERE col1 <= 100
+   ORDER BY col2
+   OPTION(RECOMPILE)
+
+   SELECT col1, col2, filler
+   FROM @T
+   WHERE col1 >= 100
+   ORDER BY col2
+   OPTION(RECOMPILE)
+
+
+	CREATE FUNCTION FnLatestHiredEmps (@CHECKDATE date, @DeptID int)
+	RETURNS TABLE
+	AS RETURN
+	SELECT Emp.FullName, Emp.DeptID
+	FROM Employees
+	WHERE HireDate BETWEEN DATEADD(d, -14, @CHECKDATE) AND @CHECKDATE AND
+	Emp.DeptID = @DeptID
