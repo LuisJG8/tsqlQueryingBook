@@ -990,3 +990,73 @@ DECLARE @T1 AS TABLE
 	FROM Employees
 	WHERE HireDate BETWEEN DATEADD(d, -14, @CHECKDATE) AND @CHECKDATE AND
 	Emp.DeptID = @DeptID
+
+-------------------------------------------------------
+SELECT TOP(1000)
+	UnitPrice
+FROM Sales.SalesOrderDetail
+ORDER BY
+	UnitPrice DESC;
+
+
+SELECT 
+	th.ProductID,
+	th.TransaxtionDate,
+	MAX(th.ActualCost) AS MaxCost
+FROM
+(
+    SELECT	
+			tha.ProductID,
+			tha.TransactionDate,
+			tha.tha.ActualCost
+	FROM Production.TransactionHistory AS tha
+	CROSS JOIN Production.TransactionHistory AS tha
+) AS th
+GROUP BY 
+	tha.ProductID,
+	tha.TransactionDate;
+
+
+
+SELECT 
+	ActualCost
+FROM Production.TransactionHistory AS th
+ORDER BY 
+	ActualCost DESC;
+
+
+SELECT 
+	p.ProductID,
+	tho.TransactionID
+FROM Production.Product AS p
+CROSS APPLY
+(
+		SELECT TOP(1000)
+			th.TransactionId
+		FROM Production.TransactionHistory AS th
+		WHERE
+			th.ProductionID = p.ProductionID
+		ORDER BY
+			th.TransactionID
+) AS thO
+ORDER BY
+	thO.TransactionId;
+
+
+SELECT *
+FROM
+(
+	SELECT
+		sh.*,
+		sd.ProductId
+	FROM
+	(
+		SELECT TOP(1000)
+			  *
+		FROM Sales.SalesOrderDetail
+		ORDER BY
+			SalesOrderDetailId
+	) AS sd
+	INNER JOIN Sales.SalesOrderHeader AS sh ON
+		sh.SalessOrderId = sd.SalesOrderId
+) AS s;
