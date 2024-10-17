@@ -1060,3 +1060,75 @@ FROM
 	INNER JOIN Sales.SalesOrderHeader AS sh ON
 		sh.SalessOrderId = sd.SalesOrderId
 ) AS s;
+
+
+USE tempdb;
+GO
+
+----------------------------------------------------
+CREATE PARTITION FUNCTION pf_1 (INT)
+AS RANGE LEFT FOR VALUES
+(
+	25000, 50000, 75000, 100000,
+	125000, 150000, 175000, 2100000,
+	225000, 250000, 275000, 3100000,
+	325000, 350000, 375000, 4100000,
+	425000, 450000, 475000, 5100000,
+	525000, 550000, 575000, 6100000,
+	625000, 650000, 675000, 7100000,
+	725000, 750000, 775000, 8100000,
+	825000, 850000, 875000, 9100000,
+	925000, 950000, 975000, 1000000
+)
+
+CREATE PARTITION SCHEME ps_1
+AS PARTITION pf_1 ALL TO ([PRIMARY]);
+GO
+
+CREATE TABLE dbo.partitioned_table
+(
+ col1 INT NOT NULL,
+ col2 INT NOT NULL,
+ some_stuff CHAR(200)  NOT NULL DEFAULT('')
+) ON ps_1(col1);
+GO
+
+CREATE UNIQUE CLUSTERED INDEX ix_col1
+ON dbo.partitioned_table
+(
+  col1
+) ON ps_1(col1);
+GO
+
+
+WITH 
+n1 AS (SELECT 1 a UNION ALL SELECT 1),
+n2 AS (SELECT 1 a FROM n1 b, n1 c),
+n3 AS (SELECT 1 a FROM n2 b, n2 c),
+n4 AS (SELECT 1 a FROM n3 b, n3 c),
+n5 AS (SELECT 1 a FROM n4 b, n4 c),
+n6 AS (SELECT 1 a FROM n5 b, n5 c)
+INSERT INTO dbo.partitioned_table WITH (TABLOCK)
+(
+	col1,
+	col2
+)
+SELECT TOP(1000000)
+	ROW_NUMBER() OVER
+	(
+		ORDER BY
+				(SELECT NULL)
+	) AS col1,
+	CHECKSUM(NEWID()) AS col2
+FROM n6;
+GO
+
+
+SELECT
+	COUNT(*)
+FROM partitioned_table AS pt1
+INNER JOIN partitioned_table AS pt2 ON
+	pt1.col1 = pt2.col1
+WHERE
+	pt1.col1 BETWEEN 25000 AND 50000;
+GO
